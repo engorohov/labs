@@ -1,0 +1,73 @@
+fullnameOverride: kps
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    retentionSize: 2GB
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+    # включить автоматическое подхватывание ServiceMonitor из всех неймспейсов
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname', 'severity']
+      group_wait: 10s
+      group_interval: 30s
+      repeat_interval: 1h
+      receiver: 'null'
+    receivers:
+      - name: 'null'   # пока без интеграций, добавим в задаче 11
+    inhibit_rules:
+      - source_matchers: [severity="critical"]
+        target_matchers: [severity="warning"]
+        equal: [alertname, namespace]
+
+grafana:
+  adminPassword: "admin"     # для лабы; в проде через секрет
+  service:
+    type: ClusterIP
+  persistence:
+    enabled: true
+    size: 5Gi
+  defaultDashboardsTimezone: browser
+  # автоматически подгрузить дашборд Node Exporter Full (id 1860)
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+node-exporter поставится автоматически как DaemonSet на каждом узле
+nodeExporter:
+  enabled: true
+kube-state-metrics поставится автоматически
+kube-state-metrics:
+  enabled: true
