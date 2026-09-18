@@ -1,14 +1,15 @@
 fullnameOverride: kps
 prometheus:
   prometheusSpec:
+    insecureSkipVerify: true
     retention: 15d
     retentionSize: 2GB
     resources:
       requests:
-        cpu: 100m
-        memory: 512Mi
+        cpu: 20m
+        memory: 150Mi
       limits:
-        memory: 1Gi
+        memory: 250Mi
     # включить автоматическое подхватывание ServiceMonitor из всех неймспейсов
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
