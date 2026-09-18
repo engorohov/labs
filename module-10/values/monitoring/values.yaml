@@ -66,9 +66,9 @@ grafana:
           options:
             path: /var/lib/grafana/dashboards/default
 
-node-exporter поставится автоматически как DaemonSet на каждом узле
+#node-exporter поставится автоматически как DaemonSet на каждом узле
 nodeExporter:
   enabled: true
-kube-state-metrics поставится автоматически
+#kube-state-metrics поставится автоматически
 kube-state-metrics:
   enabled: true
