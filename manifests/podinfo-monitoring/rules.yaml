@@ -1,4 +1,4 @@
-apiVersion: ://coreos.com
+apiVersion: ://coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: podinfo-rules
