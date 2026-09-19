@@ -25,7 +25,7 @@ spec:
             description: "More than 5% of requests are returning 5xx (current: {{ $value | humanizePercentage }})."
         
         - alert: PodinfoDown
-          expr: up{namespace="podinfo-dev", job="demo"} == 0
+          expr: up{namespace="podinfo-dev", job="demo"} == 0 or absent(up{namespace="podinfo-dev", job="demo"}) == 1
           for: 1m
           labels:
             severity: critical
