@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/engorohov/module10-argo.git
+    repoURL: https://github.com/engorohov/labs.git
     targetRevision: module-11
     path: manifests/podinfo-monitoring
   destination:
