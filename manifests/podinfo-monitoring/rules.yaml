@@ -1,0 +1,34 @@
+apiVersion: ://coreos.com
+kind: PrometheusRule
+metadata:
+  name: podinfo-rules
+  namespace: podinfo-dev
+  labels:
+    release: kps
+spec:
+  groups:
+    - name: podinfo.rules
+      interval: 30s
+      rules:
+        - alert: PodinfoHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{namespace="podinfo-dev", status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{namespace="podinfo-dev"}[5m]))
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High 5xx error rate on podinfo"
+            description: "More than 5% of requests are returning 5xx (current: {{ $value | humanizePercentage }})."
+        
+        - alert: PodinfoDown
+          expr: up{namespace="podinfo-dev", job="demo"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Podinfo is down"
+            description: "Podinfo target is not responding for 1m."
