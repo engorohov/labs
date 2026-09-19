@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: demo
+  namespace: podinfo-dev
+  labels:
+    release: kps        # ВАЖНО: чтобы Prometheus подхватил, нужна метка
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: podinfo
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
