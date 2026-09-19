@@ -38,7 +38,17 @@ alertmanager:
       group_wait: 10s
       group_interval: 30s
       repeat_interval: 1h
-      receiver: 'null'
+      receiver: 'telegram'      # <--- ТЕПЕРЬ ВСЁ ПО УМОЛЧАНИЮ ЛЕТИТ В ТЕЛЕГРАМ!
+      routes:
+        - matchers:
+            - alertname="Watchdog"
+          receiver: 'null'       # Этот технический алерт глушим, чтобы не спамил
+        - matchers:
+            - severity="critical"  # КРИТИЧЕСКИЕ СЛАДЫВАЕМ В ОТДЕЛЬНЫЙ КАНАЛ
+          receiver: 'telegram-critical'
+          group_wait: 5s
+          repeat_interval: 30m
+
     receivers:
       - name: 'telegram'
         telegram_configs:
