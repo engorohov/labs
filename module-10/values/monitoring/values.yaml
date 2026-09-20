@@ -25,8 +25,11 @@ prometheus:
 
 fullnameOverride: kps
 alertmanager:
-  # Изменяем конфигурацию самого Хельм-чарта:
   alertmanagerSpec:
+    # Идеальный способ: Кубернетс сам берет ключи из секрета и превращает их в переменные окружения!
+    envFrom:
+      - secretRef:
+          name: alertmanager-telegram-secret
     resources:
       requests:
         cpu: 50m
@@ -52,9 +55,9 @@ alertmanager:
     receivers:
       - name: 'telegram'
         telegram_configs:
-          # Ссылаемся на переменные, которые Кубер развернет из секретных файлов!
-          - bot_token: "{{ .Values.alertmanager.secretConfig.bot_token }}"
-            chat_id: "{{ .Values.alertmanager.secretConfig.chat_id }}"
+          # Alertmanager автоматически подставит данные из переменных окружения!
+          - bot_token: '${BOT_TOKEN}'
+            chat_id: '${CHAT_ID}'
             parse_mode: 'HTML'
             send_resolved: true
             message: |
@@ -65,8 +68,8 @@ alertmanager:
               {{ end }}
       - name: 'telegram-critical'
         telegram_configs:
-          - bot_token: "{{ .Values.alertmanager.secretConfig.bot_token }}"
-            chat_id: "{{ .Values.alertmanager.secretConfig.chat_id }}"
+          - bot_token: '${BOT_TOKEN}'
+            chat_id: '${CHAT_ID}'
             parse_mode: 'HTML'
             send_resolved: true
             message: |
@@ -76,12 +79,6 @@ alertmanager:
               {{ .Annotations.summary }}
               {{ .Annotations.description }}
               {{ end }}
-
-  # А вот сюда, в самый низ блока alertmanager (на уровне config), мы безопасно подмешиваем Хельму 
-  # указание взять данные из нашего секретного объекта, который мы создали руками на сервере!
-  secretConfig:
-    bot_token: "alertmanager-telegram-secret:bot_token"
-    chat_id: "alertmanager-telegram-secret:chat_id"
 
 grafana:
   # Безопасный импорт логина и пароля из секрета K8s
