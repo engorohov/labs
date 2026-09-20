@@ -25,9 +25,10 @@ prometheus:
 
 fullnameOverride: kps
 alertmanager:
-  # Принудительный встроенный монтаж секрета Хельмом в обход оператора:
-  secret: alertmanager-telegram-secret
   alertmanagerSpec:
+    # Заставляем оператор принудительно прикрепить наш секрет
+    secrets:
+      - alertmanager-telegram-secret
     resources:
       requests:
         cpu: 50m
@@ -53,8 +54,8 @@ alertmanager:
     receivers:
       - name: 'telegram'
         telegram_configs:
-          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-secret/bot_token' # <--- ТУТ ИЗМЕНЕН ПУТЬ!
-            chat_id_file: '/etc/alertmanager/secrets/alertmanager-secret/chat_id'     # <--- ТУТ ИЗМЕНЕН ПУТЬ!
+          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/bot_token'
+            chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/chat_id'
             parse_mode: 'HTML'
             send_resolved: true
             message: |
@@ -65,8 +66,8 @@ alertmanager:
               {{ end }}
       - name: 'telegram-critical'
         telegram_configs:
-          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-secret/bot_token' # <--- ТУТ ИЗМЕНЕН ПУТЬ!
-            chat_id_file: '/etc/alertmanager/secrets/alertmanager-secret/chat_id'     # <--- ТУТ ИЗМЕНЕН ПУТЬ!
+          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/bot_token'
+            chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/chat_id'
             parse_mode: 'HTML'
             send_resolved: true
             message: |
