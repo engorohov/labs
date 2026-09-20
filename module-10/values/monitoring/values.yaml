@@ -22,7 +22,10 @@ prometheus:
           resources:
             requests:
               storage: 10Gi
-
+          additionalAlertManagers:
+            - namespace: monitoring
+            name: alertmanager-kps-alertmanager
+            port: web
 fullnameOverride: kps
 alertmanager:
   alertmanagerSpec:
