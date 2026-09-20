@@ -23,10 +23,11 @@ prometheus:
             requests:
               storage: 10Gi
 
+fullnameOverride: kps
 alertmanager:
+  # Принудительный встроенный монтаж секрета Хельмом в обход оператора:
+  secret: alertmanager-telegram-secret
   alertmanagerSpec:
-    secrets:
-      - alertmanager-telegram-secret
     resources:
       requests:
         cpu: 50m
@@ -39,22 +40,21 @@ alertmanager:
       group_wait: 10s
       group_interval: 30s
       repeat_interval: 1h
-      receiver: 'telegram'      # <--- ТЕПЕРЬ ВСЁ ПО УМОЛЧАНИЮ ЛЕТИТ В ТЕЛЕГРАМ!
+      receiver: 'telegram'
       routes:
         - matchers:
             - alertname="Watchdog"
-          receiver: 'null'       # Этот технический алерт глушим, чтобы не спамил
+          receiver: 'null'
         - matchers:
-            - severity="critical"  # КРИТИЧЕСКИЕ СЛАДЫВАЕМ В ОТДЕЛЬНЫЙ КАНАЛ
+            - severity="critical"
           receiver: 'telegram-critical'
           group_wait: 5s
           repeat_interval: 30m
-
     receivers:
       - name: 'telegram'
         telegram_configs:
-          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/bot_token'
-            chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/chat_id'
+          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-secret/bot_token' # <--- ТУТ ИЗМЕНЕН ПУТЬ!
+            chat_id_file: '/etc/alertmanager/secrets/alertmanager-secret/chat_id'     # <--- ТУТ ИЗМЕНЕН ПУТЬ!
             parse_mode: 'HTML'
             send_resolved: true
             message: |
@@ -65,8 +65,8 @@ alertmanager:
               {{ end }}
       - name: 'telegram-critical'
         telegram_configs:
-          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/bot_token'
-            chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/chat_id'
+          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-secret/bot_token' # <--- ТУТ ИЗМЕНЕН ПУТЬ!
+            chat_id_file: '/etc/alertmanager/secrets/alertmanager-secret/chat_id'     # <--- ТУТ ИЗМЕНЕН ПУТЬ!
             parse_mode: 'HTML'
             send_resolved: true
             message: |
