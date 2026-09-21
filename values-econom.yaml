@@ -1,16 +1,36 @@
+fullnameOverride: kps
+
+# === ТОТАЛЬНАЯ ЭКОНОМИЯ РЕСУРСОВ КЛАСТЕРА ===
+# Отключаем дефолтные тяжелые правила мониторинга самого Кубера, которые грузят CPU
+defaultRules:
+  create: false
+
+# Отключаем сбор метрик со служебных компонентов, которых на K3s все равно часто нет в дефолтном виде
+kubeApiServer:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+# === НАСТРОЙКИ ПРОМЕТЕУСА ===
 prometheus:
   prometheusSpec:
     insecureSkipVerify: true
     scrapeInterval: 1m
-    retention: 2h
-    retentionSize: 500MB
+    retention: 2h          # Храним метрики всего 2 часа, чтобы не забивать ОЗУ
+    retentionSize: 300MB
     resources:
       requests:
-        cpu: 100m
-        memory: 250Mi
+        cpu: 50m           # Минимальный старт
+        memory: 200Mi
       limits:
-        cpu: 300m
-        memory: 500Mi
+        cpu: 250m          # Жесткий потолок по процессору
+        memory: 400Mi      # Безопасный потолок для 4ГБ ноды
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
@@ -26,7 +46,7 @@ prometheus:
         name: alertmanager-kps-alertmanager
         port: web
 
-fullnameOverride: kps
+# === НАСТРОЙКИ АЛЕРТМЕНЕДЖЕРА (ТЕЛЕГРАМ) ===
 alertmanager:
   alertmanagerSpec:
     envFrom:
@@ -34,7 +54,10 @@ alertmanager:
           name: alertmanager-telegram-secret
     resources:
       requests:
-        cpu: 50m
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 100m
         memory: 64Mi
   config:
     global:
@@ -82,29 +105,24 @@ alertmanager:
               {{ .Annotations.description }}
               {{ end }}
 
+# === НАСТРОЙКИ ГРАФАНЫ ===
 grafana:
   admin:
     existingSecret: "grafana-admin-secret"
     userKey: "admin-user"
     passwordKey: "admin-password"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      cpu: 200m
+      memory: 250Mi
   service:
     type: ClusterIP
   persistence:
     enabled: true
     size: 5Gi
-  defaultDashboardsTimezone: browser
-  dashboardProviders:
-    dashboardproviders.yaml:
-      apiVersion: 1
-      providers:
-        - name: 'default'
-          orgId: 1
-          folder: ''
-          type: file
-          disableDeletion: false
-          editable: true
-          options:
-            path: /var/lib/grafana/dashboards/default
 
 nodeExporter:
   enabled: true
