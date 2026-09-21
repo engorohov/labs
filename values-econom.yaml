@@ -7,11 +7,11 @@ prometheus:
     retentionSize: 500MB
     resources:
       requests:
-        cpu: 20m
+        cpu: 100m
         memory: 250Mi
       limits:
-        memory: 250Mi
-    # включить автоматическое подхватывание ServiceMonitor из всех неймспейсов
+        cpu: 400m
+        memory: 500Mi
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
@@ -22,95 +22,7 @@ prometheus:
           resources:
             requests:
               storage: 10Gi
-          additionalAlertManagers:
-            - namespace: monitoring
-            name: alertmanager-kps-alertmanager
-            port: web
-fullnameOverride: kps
-alertmanager:
-  alertmanagerSpec:
-    # Идеальный способ: Кубернетс сам берет ключи из секрета и превращает их в переменные окружения!
-    envFrom:
-      - secretRef:
-          name: alertmanager-telegram-secret
-    resources:
-      requests:
-        cpu: 50m
-        memory: 64Mi
-  config:
-    global:
-      resolve_timeout: 5m
-    route:
-      group_by: ['alertname', 'severity']
-      group_wait: 10s
-      group_interval: 30s
-      repeat_interval: 1h
-      receiver: 'telegram'
-      routes:
-        - matchers:
-            - alertname="Watchdog"
-          receiver: 'null'
-        - matchers:
-            - severity="critical"
-          receiver: 'telegram-critical'
-          group_wait: 5s
-          repeat_interval: 30m
-    receivers:
-      - name: 'telegram'
-        telegram_configs:
-          # Alertmanager автоматически подставит данные из переменных окружения!
-          - bot_token: '${BOT_TOKEN}'
-            chat_id: '${CHAT_ID}'
-            parse_mode: 'HTML'
-            send_resolved: true
-            message: |
-              {{ range .Alerts }}
-              <b>{{ .Labels.alertname }}</b> [{{ .Labels.severity }}]
-              {{ .Annotations.summary }}
-              {{ .Annotations.description }}
-              {{ end }}
-      - name: 'telegram-critical'
-        telegram_configs:
-          - bot_token: '${BOT_TOKEN}'
-            chat_id: '${CHAT_ID}'
-            parse_mode: 'HTML'
-            send_resolved: true
-            message: |
-              🔥🔥🔥 CRITICAL 🔥🔥🔥
-              {{ range .Alerts }}
-              <b>{{ .Labels.alertname }}</b>
-              {{ .Annotations.summary }}
-              {{ .Annotations.description }}
-              {{ end }}
-
-grafana:
-  # Безопасный импорт логина и пароля из секрета K8s
-  admin:
-    existingSecret: "grafana-admin-secret"
-    userKey: "admin-user"
-    passwordKey: "admin-password"
-  service:
-    type: ClusterIP
-  persistence:
-    enabled: true
-    size: 5Gi
-  defaultDashboardsTimezone: browser
-  dashboardProviders:
-    dashboardproviders.yaml:
-      apiVersion: 1
-      providers:
-        - name: 'default'
-          orgId: 1
-          folder: ''
-          type: file
-          disableDeletion: false
-          editable: true
-          options:
-            path: /var/lib/grafana/dashboards/default
-
-#node-exporter поставится автоматически как DaemonSet на каждом узле
-nodeExporter:
-  enabled: true
-#kube-state-metrics поставится автоматически
-kube-state-metrics:
-  enabled: true
+    additionalAlertManagers:
+      - namespace: monitoring
+        name: alertmanager-kps-alertmanager
+        port: web
