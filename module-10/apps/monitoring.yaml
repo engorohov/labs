@@ -11,7 +11,7 @@ spec:
       targetRevision: 91.4.1   # подставь актуальную, проверь через `helm search repo`
       helm:
         valueFiles:
-          - $values/module-10/values/monitoring/values.yaml
+          - $values/values-econom.yaml
     - repoURL: https://github.com/engorohov/labs
       targetRevision: main
       ref: values
