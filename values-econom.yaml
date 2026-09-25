@@ -111,20 +111,34 @@ grafana:
     existingSecret: "grafana-admin-secret"
     userKey: "admin-user"
     passwordKey: "admin-password"
+  
+  image:
+    registry: docker.io
+    repository: grafana/grafana
+    tag: 11.2.0
+
   resources:
     requests:
-      cpu: 50m
-      memory: 100Mi
+      cpu: 350m
+      memory: 256Mi
     limits:
-      cpu: 200m
-      memory: 250Mi
+      cpu: 450Mi
+      memory: 512Mi
+
+  livenessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 30
+    periodSeconds: 20
+    failureThreshold: 5
+
+  readinessProbe:
+    initialDelaySeconds: 30
+    timeoutSeconds: 30
+    periodSeconds: 10
+    failureThreshold: 5
+
   service:
     type: ClusterIP
   persistence:
     enabled: true
     size: 5Gi
-
-nodeExporter:
-  enabled: true
-kube-state-metrics:
-  enabled: true
