@@ -7,3 +7,6 @@ image:
   tag: "broken-leg-version"
 postgresql:
   enabled: false
+env:
+    - name: OPENTELEMETRY_ENDPOINT
+      value: "tempo.monitoring.svc.cluster.local:4317"
