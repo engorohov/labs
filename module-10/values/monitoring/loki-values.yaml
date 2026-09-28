@@ -28,3 +28,10 @@ read:
 write:
   replicas: 0
 
+chunksCache:
+  allocatedMemory: 0
+  enabled: false
+
+resultsCache:
+  enabled: false
+
