@@ -1,4 +1,4 @@
 config:
   clients:
-    - url: http://cluster.local
+    - url: http://loki-gateway.monitoring.svc.cluster.local/loki/api/vi/push
 
