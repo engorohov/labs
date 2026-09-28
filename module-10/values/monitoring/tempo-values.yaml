@@ -1,0 +1,31 @@
+tempo:
+  auth_enabled: false
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+      wal:
+        path: /var/tempo/wal
+
+# Запускаем в режиме одного пода
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 500Mi  # Экономим место на диске
+
+# Отключаем распределенные компоненты и кэши для экономии ресурсов
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+distributor:
+  replicas: 0
+compactor:
+  replicas: 0
+metricsGenerator:
+  enabled: false
+
