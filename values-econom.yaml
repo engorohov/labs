@@ -145,8 +145,7 @@ grafana:
   dashboards:
     default:
       podinfo-dashboard:
-        json:
-
+        json: |
           {
             "annotations": {
               "list": [
