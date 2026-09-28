@@ -1,0 +1,4 @@
+config:
+  clients:
+    - url: http://cluster.local
+
