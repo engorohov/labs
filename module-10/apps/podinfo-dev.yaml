@@ -24,7 +24,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-env:
-  - name: OPENTELEMETRY_ENDPOINT
-    value: "tempo.monitoring.svc.cluster.local:4317"
-
