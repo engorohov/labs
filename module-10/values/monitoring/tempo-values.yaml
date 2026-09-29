@@ -1,10 +1,23 @@
-tempo:
-  auth_enabled: false
-  # Новый правильный формат хранения для Tempo 2.x
-  repository_config:
-    local:
-      path: /var/tempo/traces
+# Передаем конфигурацию как многострочный текст (строку) для старого чарта
+config: |
+  multitenancy_enabled: false
   
+  ingester:
+    lifecycler:
+      ring:
+        kvstore:
+          store: inmemory
+        replication_factor: 1
+  
+  distributor:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
   storage:
     trace:
       backend: local
@@ -13,14 +26,10 @@ tempo:
       wal:
         path: /var/tempo/wal
 
-# Настройка диска (Volume Claim)
+# Настройка диска остается обычным YAML на самом краю (без отступов)
 singleBinary:
   replicas: 1
   persistence:
     enabled: true
     size: 1Gi
-
-# Включаем автоматический сборщик портов чарта
-config:
-  metrics_generator_enabled: false
 
