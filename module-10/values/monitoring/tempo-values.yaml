@@ -13,36 +13,28 @@ singleBinary:
   replicas: 1
   persistence:
     enabled: true
-    size: 500Mi  # Экономим место на диске
+    size: 1Gi
 
-# Отключаем распределенные компоненты и кэши для экономии ресурсов
+# ВКЛЮЧАЕМ ПРИЕМ ТРЕЙСОВ ОТ ПОДОВ (Этот блок откроет порт 4317!)
+distributor:
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+# Отключаем лишние компоненты, чтобы сэкономить ресурсы сервера
 ingester:
   replicas: 0
 querier:
   replicas: 0
 queryFrontend:
   replicas: 0
-distributor:
-  replicas: 0
 compactor:
   replicas: 0
 metricsGenerator:
   enabled: false
-
-# Отключаем лимиты и блокировку входящих трейсов
-distributor:
-  receivers:
-    otlp:
-      protocols:
-        grpc:
-        http:
-  config:
-    log_received_spans:
-      enabled: true
-
-# Разрешаем принимать любые трейсы в тестовой среде
-limits_config:
-  max_global_streams_per_user: 0
-  ingestion_rate_limit_bytes: 104857600  # Увеличиваем лимит до 100 Мб/с
-  ingestion_burst_size_bytes: 209715200
 
