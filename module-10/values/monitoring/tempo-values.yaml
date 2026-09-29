@@ -1,14 +1,9 @@
-# Передаем конфигурацию как многострочный текст (строку) для старого чарта
 config: |
   multitenancy_enabled: false
-  
-  ingester:
-    lifecycler:
-      ring:
-        kvstore:
-          store: inmemory
-        replication_factor: 1
-  
+
+  server:
+    http_listen_port: 3100
+
   distributor:
     receivers:
       otlp:
@@ -18,6 +13,13 @@ config: |
           http:
             endpoint: 0.0.0.0:4318
 
+  ingester:
+    lifecycler:
+      ring:
+        kvstore:
+          store: inmemory
+        replication_factor: 1
+
   storage:
     trace:
       backend: local
@@ -26,7 +28,6 @@ config: |
       wal:
         path: /var/tempo/wal
 
-# Настройка диска остается обычным YAML на самом краю (без отступов)
 singleBinary:
   replicas: 1
   persistence:
