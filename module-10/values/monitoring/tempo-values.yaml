@@ -29,3 +29,20 @@ compactor:
 metricsGenerator:
   enabled: false
 
+# Отключаем лимиты и блокировку входящих трейсов
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+        http:
+  config:
+    log_received_spans:
+      enabled: true
+
+# Разрешаем принимать любые трейсы в тестовой среде
+limits_config:
+  max_global_streams_per_user: 0
+  ingestion_rate_limit_bytes: 104857600  # Увеличиваем лимит до 100 Мб/с
+  ingestion_burst_size_bytes: 209715200
+
