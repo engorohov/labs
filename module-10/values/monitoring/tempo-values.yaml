@@ -1,12 +1,10 @@
-# Принудительно отключаем мультиарендность на уровне генератора чарта
 multitenancyEnabled: false
 
-# Настройки самого сервера Tempo
 config: |
   multitenancy_enabled: false
 
   server:
-    http_listen_port: 3100
+    http_listen_port: 3200 # ИСПРАВЛЕНО ЗДЕСЬ (было 3100)
     grpc_listen_port: 9095
 
   distributor:
