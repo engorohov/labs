@@ -1,3 +1,5 @@
+defaultRules:
+  create: true
 fullnameOverride: kps
 prometheus:
   prometheusSpec:
@@ -26,7 +28,6 @@ prometheus:
             - namespace: monitoring
             name: alertmanager-kps-alertmanager
             port: web
-fullnameOverride: kps
 alertmanager:
   alertmanagerSpec:
     # Идеальный способ: Кубернетс сам берет ключи из секрета и превращает их в переменные окружения!
