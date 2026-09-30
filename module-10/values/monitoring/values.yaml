@@ -1,5 +1,14 @@
 defaultRules:
   create: true
+  rules:
+    node: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubelet: true
+    kubernetesSystem: true
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
 fullnameOverride: kps
 prometheus:
   prometheusSpec:
