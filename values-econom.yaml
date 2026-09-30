@@ -1,3 +1,10 @@
+defaultRules:
+  create: true
+  rules:
+    node: true
+    kubernetesApps: true
+    kubelet: true
+    kubernetesSystem: true
 fullnameOverride: kps
 
 # === ТОТАЛЬНАЯ ЭКОНОМИЯ РЕСУРСОВ КЛАСТЕРА ===
