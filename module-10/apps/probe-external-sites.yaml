@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: external-sites
+  namespace: monitoring
+  labels:
+    release: monitoring # Убедитесь, что этот лейбл совпадает с селектором вашего Prometheus
+spec:
+  jobName: blackbox-http
+  prober:
+    # Указываем полный DNS-адрес сервиса экспортера внутри кластера
+    url: blackbox-exporter-prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
+  module: http_2xx
+  targets:
+    staticConfig:
+      static:
+        - https://google.com
+        - https://gitlab.com
+
