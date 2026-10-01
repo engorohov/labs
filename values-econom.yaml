@@ -53,8 +53,8 @@ prometheus:
 # === НАСТРОЙКИ АЛЕРТМЕНЕДЖЕРА (ТЕЛЕГРАМ) ===
 alertmanager:
   alertmanagerSpec:
-    - secret:
-       name: alertmanager-telegram-secret
+    secret:
+      - alertmanager-telegram-secret
     resources:
       requests:
         cpu: 20m
