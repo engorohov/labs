@@ -53,7 +53,7 @@ prometheus:
 # === НАСТРОЙКИ АЛЕРТМЕНЕДЖЕРА (ТЕЛЕГРАМ) ===
 alertmanager:
   alertmanagerSpec:
-    secret:
+    secrets:
       - alertmanager-telegram-secret
     resources:
       requests:
