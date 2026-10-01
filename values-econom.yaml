@@ -54,7 +54,7 @@ prometheus:
 alertmanager:
   alertmanagerSpec:
     - secret:
-          name: alertmanager-telegram-secret
+       name: alertmanager-telegram-secret
     resources:
       requests:
         cpu: 20m
