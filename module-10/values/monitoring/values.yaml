@@ -3,31 +3,41 @@ defaultRules:
   rules:
     node: true
     kubernetesApps: true
-    kubernetesResources: true
-    kubernetesStorage: true
     kubelet: true
     kubernetesSystem: true
-    kubePrometheusGeneral: true
-    kubePrometheusNodeRecording: true
 fullnameOverride: kps
+
+# === ТОТАЛЬНАЯ ЭКОНОМИЯ РЕСУРСОВ КЛАСТЕРА ===
+
+# Отключаем сбор метрик со служебных компонентов, которых на K3s все равно часто нет в дефолтном виде
+kubeApiServer:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+# === НАСТРОЙКИ ПРОМЕТЕУСА ===
 prometheus:
   prometheusSpec:
     insecureSkipVerify: true
     scrapeInterval: 1m
-    retention: 2h
-    retentionSize: 500MB
+    retention: 2h          # Храним метрики всего 2 часа, чтобы не забивать ОЗУ
+    retentionSize: 300MB
     resources:
       requests:
-        cpu: 20m
-        memory: 250Mi
+        cpu: 50m           # Минимальный старт
+        memory: 200Mi
       limits:
-        memory: 250Mi
-    # включить автоматическое подхватывание ServiceMonitor из всех неймспейсов
+        cpu: 250m          # Жесткий потолок по процессору
+        memory: 400Mi      # Безопасный потолок для 4ГБ ноды
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
-    ruleSelector: {}
-    ruleNamespaceSelector: {}
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -35,19 +45,22 @@ prometheus:
           resources:
             requests:
               storage: 10Gi
-          additionalAlertManagers:
-            - namespace: monitoring
-            name: alertmanager-kps-alertmanager
-            port: web
+    additionalAlertManagers:
+      - namespace: monitoring
+        name: alertmanager-kps-alertmanager
+        port: web
+
+# === НАСТРОЙКИ АЛЕРТМЕНЕДЖЕРА (ТЕЛЕГРАМ) ===
 alertmanager:
   alertmanagerSpec:
-    # Идеальный способ: Кубернетс сам берет ключи из секрета и превращает их в переменные окружения!
-    envFrom:
-      - secretRef:
-          name: alertmanager-telegram-secret
+    secrets:
+      - alertmanager-telegram-secret
     resources:
       requests:
-        cpu: 50m
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 100m
         memory: 64Mi
   config:
     global:
@@ -63,19 +76,23 @@ alertmanager:
             - alertname="Watchdog"
           receiver: 'null'
         - matchers:
+            - alertname="InfoInhibitor"
+          receiver: 'null'
+        - matchers:
             - severity="critical"
           receiver: 'telegram-critical'
           group_wait: 5s
           repeat_interval: 30m
     receivers:
+      - name: 'null'
       - name: 'telegram'
         telegram_configs:
-          # Alertmanager автоматически подставит данные из переменных окружения!
-          - bot_token: '${BOT_TOKEN}'
-            chat_id: '${CHAT_ID}'
+          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/BOT_TOKEN'
+            chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/CHAT_ID'
             parse_mode: 'HTML'
             send_resolved: true
             message: |
+              {{ if eq .Status "firing" }}🔔 Alert Firing 🔔{{ else }}✅ Alert Resolved ✅{{ end }}
               {{ range .Alerts }}
               <b>{{ .Labels.alertname }}</b> [{{ .Labels.severity }}]
               {{ .Annotations.summary }}
@@ -83,46 +100,430 @@ alertmanager:
               {{ end }}
       - name: 'telegram-critical'
         telegram_configs:
-          - bot_token: '${BOT_TOKEN}'
-            chat_id: '${CHAT_ID}'
+          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/BOT_TOKEN'
+            chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/CHAT_ID'
             parse_mode: 'HTML'
             send_resolved: true
             message: |
-              🔥🔥🔥 CRITICAL 🔥🔥🔥
+              {{ if eq .Status "firing" }}🔥🔥🔥 CRITICAL FIRING 🔥🔥🔥{{ else }}💚💚💚 CRITICAL RESOLVED 💚💚💚{{ end }}
               {{ range .Alerts }}
               <b>{{ .Labels.alertname }}</b>
               {{ .Annotations.summary }}
               {{ .Annotations.description }}
               {{ end }}
 
+# === НАСТРОЙКИ ГРАФАНЫ ===
 grafana:
-  # Безопасный импорт логина и пароля из секрета K8s
   admin:
     existingSecret: "grafana-admin-secret"
     userKey: "admin-user"
     passwordKey: "admin-password"
+  
+  image:
+    registry: docker.io
+    repository: grafana/grafana
+    tag: 11.2.0
+
+  resources:
+    requests:
+      cpu: 350m
+      memory: 256Mi
+    limits:
+      cpu: 450Mi
+      memory: 512Mi
+
+  livenessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 30
+    periodSeconds: 20
+    failureThreshold: 5
+
+  readinessProbe:
+    initialDelaySeconds: 30
+    timeoutSeconds: 30
+    periodSeconds: 10
+    failureThreshold: 5
+
   service:
     type: ClusterIP
   persistence:
     enabled: true
     size: 5Gi
-  defaultDashboardsTimezone: browser
-  dashboardProviders:
-    dashboardproviders.yaml:
-      apiVersion: 1
-      providers:
-        - name: 'default'
-          orgId: 1
-          folder: ''
-          type: file
-          disableDeletion: false
-          editable: true
-          options:
-            path: /var/lib/grafana/dashboards/default
-
-#node-exporter поставится автоматически как DaemonSet на каждом узле
-nodeExporter:
-  enabled: true
-#kube-state-metrics поставится автоматически
-kube-state-metrics:
-  enabled: true
+  dashboards:
+    default:
+      podinfo-dashboard:
+        json: |
+          {
+            "annotations": {
+              "list": [
+                {
+                  "builtIn": 1,
+                  "datasource": {
+                    "type": "grafana",
+                    "uid": "-- Grafana --"
+                  },
+                  "enable": true,
+                  "hide": true,
+                  "iconColor": "rgba(0, 211, 255, 1)",
+                  "name": "Annotations & Alerts",
+                  "type": "dashboard"
+                }
+              ]
+            },
+            "editable": true,
+            "fiscalYearStartMonth": 0,
+            "graphTooltip": 0,
+            "id": 25,
+            "links": [],
+            "panels": [
+              {
+                "datasource": {
+                  "default": true,
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "thresholds"
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    }
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 8,
+                  "w": 12,
+                  "x": 0,
+                  "y": 0
+                },
+                "id": 3,
+                "options": {
+                  "colorMode": "value",
+                  "graphMode": "none",
+                  "justifyMode": "auto",
+                  "orientation": "auto",
+                  "percentChangeColorMode": "standard",
+                  "reduceOptions": {
+                    "calcs": [
+                      "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                  },
+                  "showPercentChange": false,
+                  "textMode": "auto",
+                  "wideLayout": true
+                },
+                "pluginVersion": "11.2.0",
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "kube_deployment_status_replicas_available{namespace=\"podinfo-dev\", deployment=\"demo\"}",
+                    "instant": false,
+                    "legendFormat": "__auto",
+                    "range": true,
+                    "refId": "A"
+                  }
+                ],
+                "title": "Количество реплик",
+                "type": "stat"
+              },
+              {
+                "datasource": {
+                  "default": true,
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "palette-classic"
+                    },
+                    "custom": {
+                      "axisBorderShow": false,
+                      "axisCenteredZero": false,
+                      "axisColorMode": "text",
+                      "axisLabel": "",
+                      "axisPlacement": "auto",
+                      "barAlignment": 0,
+                      "barWidthFactor": 0.6,
+                      "drawStyle": "line",
+                      "fillOpacity": 0,
+                      "gradientMode": "none",
+                      "hideFrom": {
+                        "legend": false,
+                        "tooltip": false,
+                        "viz": false
+                      },
+                      "insertNulls": false,
+                      "lineInterpolation": "linear",
+                      "lineWidth": 1,
+                      "pointSize": 5,
+                      "scaleDistribution": {
+                        "type": "linear"
+                      },
+                      "showPoints": "auto",
+                      "spanNulls": false,
+                      "stacking": {
+                        "group": "A",
+                        "mode": "none"
+                      },
+                      "thresholdsStyle": {
+                        "mode": "off"
+                      }
+                    },
+                    "displayName": "Запросы/сек",
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    }
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 8,
+                  "w": 12,
+                  "x": 12,
+                  "y": 0
+                },
+                "id": 1,
+                "options": {
+                  "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                  },
+                  "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                  }
+                },
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(rate(http_requests_total{namespace=\"podinfo-dev\"}[5m]))",
+                    "instant": false,
+                    "legendFormat": "{{rps}}",
+                    "range": true,
+                    "refId": "A"
+                  }
+                ],
+                "title": "RPS",
+                "type": "timeseries"
+              },
+              {
+                "datasource": {
+                  "default": true,
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "palette-classic"
+                    },
+                    "custom": {
+                      "axisBorderShow": false,
+                      "axisCenteredZero": false,
+                      "axisColorMode": "text",
+                      "axisLabel": "",
+                      "axisPlacement": "auto",
+                      "barAlignment": 0,
+                      "barWidthFactor": 0.6,
+                      "drawStyle": "line",
+                      "fillOpacity": 0,
+                      "gradientMode": "none",
+                      "hideFrom": {
+                        "legend": false,
+                        "tooltip": false,
+                        "viz": false
+                      },
+                      "insertNulls": false,
+                      "lineInterpolation": "linear",
+                      "lineWidth": 1,
+                      "pointSize": 5,
+                      "scaleDistribution": {
+                        "type": "linear"
+                      },
+                      "showPoints": "auto",
+                      "spanNulls": false,
+                      "stacking": {
+                        "group": "A",
+                        "mode": "none"
+                      },
+                      "thresholdsStyle": {
+                        "mode": "off"
+                      }
+                    },
+                    "displayName": "p95 Latency",
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    }
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 8,
+                  "w": 12,
+                  "x": 0,
+                  "y": 8
+                },
+                "id": 2,
+                "options": {
+                  "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                  },
+                  "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                  }
+                },
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"podinfo-dev\"}[5m])))",
+                    "instant": false,
+                    "legendFormat": "{{label_name}}",
+                    "range": true,
+                    "refId": "A"
+                  }
+                ],
+                "title": "p95 latency",
+                "type": "timeseries"
+              },
+              {
+                "datasource": {
+                  "default": true,
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "thresholds"
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    }
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 8,
+                  "w": 12,
+                  "x": 12,
+                  "y": 8
+                },
+                "id": 4,
+                "options": {
+                  "minVizHeight": 75,
+                  "minVizWidth": 75,
+                  "orientation": "auto",
+                  "reduceOptions": {
+                    "calcs": [
+                      "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                  },
+                  "showThresholdLabels": false,
+                  "showThresholdMarkers": true,
+                  "sizing": "auto"
+                },
+                "pluginVersion": "11.2.0",
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "((sum(rate(http_requests_total{namespace=\"podinfo-dev\", status=~\"5..\"}[5m])) / sum(rate(http_requests_total{namespace=\"podinfo-dev\"}[5m]))) * 100) or vector(0)",
+                    "instant": false,
+                    "legendFormat": "__auto",
+                    "range": true,
+                    "refId": "A"
+                  }
+                ],
+                "title": "Error rate (5xx %)",
+                "type": "gauge"
+              }
+            ],
+            "schemaVersion": 39,
+            "tags": [],
+            "templating": {
+              "list": []
+            },
+            "time": {
+              "from": "now-6h",
+              "to": "now"
+            },
+            "timepicker": {},
+            "timezone": "browser",
+            "title": "four",
+            "uid": "efzb9hnykri0wd",
+            "version": 11,
+            "weekStart": ""
+          }
