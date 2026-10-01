@@ -76,6 +76,9 @@ alertmanager:
             - alertname="Watchdog"
           receiver: 'null'
         - matchers:
+            - alertname="InfoInhibitor"
+          receiver: 'null'
+        - matchers:
             - severity="critical"
           receiver: 'telegram-critical'
           group_wait: 5s
