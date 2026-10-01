@@ -89,6 +89,7 @@ alertmanager:
             parse_mode: 'HTML'
             send_resolved: true
             message: |
+              {{ if eq .Status "firing" }}🔔 Alert Firing 🔔{{ else }}✅ Alert Resolved ✅{{ end }}
               {{ range .Alerts }}
               <b>{{ .Labels.alertname }}</b> [{{ .Labels.severity }}]
               {{ .Annotations.summary }}
@@ -101,7 +102,7 @@ alertmanager:
             parse_mode: 'HTML'
             send_resolved: true
             message: |
-              🔥🔥🔥 CRITICAL 🔥🔥🔥
+              {{ if eq .Status "firing" }}🔥🔥🔥 CRITICAL FIRING 🔥🔥🔥{{ else }}💚💚💚 CRITICAL RESOLVED 💚💚💚{{ end }}
               {{ range .Alerts }}
               <b>{{ .Labels.alertname }}</b>
               {{ .Annotations.summary }}
