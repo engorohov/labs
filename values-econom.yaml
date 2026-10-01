@@ -53,8 +53,7 @@ prometheus:
 # === НАСТРОЙКИ АЛЕРТМЕНЕДЖЕРА (ТЕЛЕГРАМ) ===
 alertmanager:
   alertmanagerSpec:
-    envFrom:
-      - secretRef:
+    - secret:
           name: alertmanager-telegram-secret
     resources:
       requests:
@@ -85,8 +84,8 @@ alertmanager:
       - name: 'null'
       - name: 'telegram'
         telegram_configs:
-          - bot_token: '${BOT_TOKEN}'
-            chat_id: '${CHAT_ID}'
+          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/BOT_TOKEN'
+            chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/CHAT_ID'
             parse_mode: 'HTML'
             send_resolved: true
             message: |
@@ -97,8 +96,8 @@ alertmanager:
               {{ end }}
       - name: 'telegram-critical'
         telegram_configs:
-          - bot_token: '${BOT_TOKEN}'
-            chat_id: '${CHAT_ID}'
+          - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/BOT_TOKEN'
+            chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/CHAT_ID'
             parse_mode: 'HTML'
             send_resolved: true
             message: |
