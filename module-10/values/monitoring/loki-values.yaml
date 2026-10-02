@@ -13,6 +13,7 @@ loki:
         index:
           prefix: loki_index_
           period: 24h
+  config:
     limits_config:
       retention_period: 72h
     compactor:
@@ -39,4 +40,3 @@ chunksCache:
 
 resultsCache:
   enabled: false
-
