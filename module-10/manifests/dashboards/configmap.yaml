@@ -379,6 +379,6 @@ kind: ConfigMap
 metadata:
   name: podinfo-dashboard
   namespace: monitoring
-    labels:
+  labels:
     grafana_dashboard: "1"
 
